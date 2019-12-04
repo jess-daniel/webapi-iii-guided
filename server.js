@@ -16,14 +16,24 @@ server.use(express.json());
 // custom middleware
 function validatePassword(req, res, next) {
   const password = req.headers.password;
-  if (password === "melon") {
+  if (password && password === "melon") {
     next();
   } else {
-    res.status(401).json({ error: "invalid password" });
+    res.status(401).json({ message: "invalid password" });
   }
 }
 
-server.use("/api/hubs", hubsRouter);
+function checkRole(role) {
+  return function(req, res, next) {
+    if (role && role === req.headers.role) {
+      next();
+    } else {
+      res.status(403).json({ message: "Invalid role permissions" });
+    }
+  };
+}
+
+server.use("/api/hubs", checkRole("admin"), hubsRouter);
 
 server.get("/", (req, res) => {
   const nameInsert = req.name ? ` ${req.name}` : "";
@@ -34,7 +44,7 @@ server.get("/", (req, res) => {
     `);
 });
 
-server.get("/area51", validatePassword(), (req, res) => {
+server.get("/area51", validatePassword, checkRole("agent"), (req, res) => {
   res.send(req.headers);
 });
 
